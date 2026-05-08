@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Árvore Geradora Mínima — Kruskal & Prim</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:      #0a0e1a;
+    --surface: #111827;
+    --card:    #161d2e;
+    --border:  #1e2d45;
+    --accent1: #00e5ff;
+    --accent2: #ff6b35;
+    --green:   #00e676;
+    --red:     #ff1744;
+    --text:    #e2eaf4;
+    --muted:   #4a607a;
+    --node-fill: #1a2744;
+    --node-stroke: #2a4070;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: .18;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .page { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  header { text-align: center; margin-bottom: 3rem; }
+  header h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(120deg, var(--accent1) 0%, #7b9fff 50%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header p { color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: .85rem; margin-top: .5rem; }
+  .examples-bar {
+    display: flex; gap: 1rem; justify-content: center; margin-bottom: 2.5rem; flex-wrap: wrap;
+  }
+  .examples-bar button {
+    background: var(--card); border: 1.5px solid var(--border);
+    color: var(--text); font-family: 'Syne', sans-serif; font-size: .9rem; font-weight: 700;
+    padding: .55rem 1.5rem; border-radius: 8px; cursor: pointer;
+    transition: all .2s;
+  }
+  .examples-bar button:hover { border-color: var(--accent1); color: var(--accent1); }
+  .examples-bar button.active { background: var(--accent1); color: var(--bg); border-color: var(--accent1); }
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 900px) { .panels { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .card-header {
+    display: flex; align-items: center; gap: .75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-header .algo-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .75rem; font-weight: 600;
+    padding: .25rem .7rem;
+    border-radius: 6px;
+    letter-spacing: .05em;
+  }
+  .kruskal .algo-badge { background: rgba(0,229,255,.12); color: var(--accent1); border: 1px solid rgba(0,229,255,.3); }
+  .prim    .algo-badge { background: rgba(255,107,53,.12); color: var(--accent2); border: 1px solid rgba(255,107,53,.3); }
+  .card-header h2 { font-size: 1.1rem; font-weight: 700; }
+  .cost-badge {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace; font-size: 1rem; font-weight: 600;
+  }
+  .kruskal .cost-badge { color: var(--accent1); }
+  .prim    .cost-badge { color: var(--accent2); }
+  .svg-wrap { padding: .5rem; }
+  svg.graph { width: 100%; height: 340px; display: block; }
+  .edge {
+    stroke: var(--muted); stroke-width: 2;
+    transition: stroke .3s, stroke-width .3s, opacity .3s;
+  }
+  .edge.added    { stroke-width: 4; }
+  .edge.skipped  { opacity: .25; }
+  .kruskal .edge.added { stroke: var(--accent1); }
+  .prim    .edge.added { stroke: var(--accent2); }
+  .edge-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    fill: var(--muted); text-anchor: middle; dominant-baseline: central;
+    transition: fill .3s;
+    pointer-events: none;
+  }
+  .kruskal .edge-label.added { fill: var(--accent1); }
+  .prim    .edge-label.added { fill: var(--accent2); }
+  .node circle {
+    fill: var(--node-fill); stroke: var(--node-stroke); stroke-width: 2;
+    transition: fill .3s, stroke .3s, stroke-width .3s;
+  }
+  .node.active circle { fill: #1a3a5c; stroke: var(--accent1); stroke-width: 3; }
+  .node text {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600;
+    fill: var(--text); text-anchor: middle; dominant-baseline: central;
+    pointer-events: none;
+  }
+  .controls {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .9rem 1.25rem;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .btn {
+    background: none; border: 1.5px solid var(--border);
+    color: var(--text); font-family: 'Syne', sans-serif; font-size: .8rem; font-weight: 700;
+    padding: .4rem 1rem; border-radius: 8px; cursor: pointer;
+    transition: all .2s;
+  }
+  .btn:hover { border-color: var(--accent1); color: var(--accent1); }
+  .btn.play  { background: var(--accent1); color: var(--bg); border-color: var(--accent1); }
+  .btn.play:hover { opacity: .85; }
+  .step-info {
+    font-family: 'JetBrains Mono', monospace; font-size: .75rem; color: var(--muted);
+    margin-left: auto;
+  }
+  .speed-wrap { display: flex; align-items: center; gap: .4rem; }
+  .speed-wrap label { font-size: .75rem; color: var(--muted); }
+  input[type=range] { accent-color: var(--accent1); width: 80px; }
+  .log-wrap { padding: 0 1.25rem 1rem; }
+  .log {
+    height: 130px; overflow-y: auto;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: .6rem .8rem;
+    font-family: 'JetBrains Mono', monospace; font-size: .75rem;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .log-entry { padding: .18rem 0; display: flex; gap: .5rem; align-items: center; }
+  .log-entry .step-num { color: var(--muted); min-width: 2.5rem; }
+  .log-entry.add  .mark { color: var(--green); }
+  .log-entry.skip .mark { color: var(--red); opacity: .6; }
+  .log-entry .edge-str { color: var(--text); }
+  .log-entry .w { color: #7b9fff; }
+  .compare-banner {
+    margin-top: 1.5rem;
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 16px; padding: 1.25rem 1.5rem;
+    display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; align-items: center;
+  }
+  .compare-banner .cmp-item { text-align: center; }
+  .compare-banner .cmp-label { font-size: .75rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .compare-banner .cmp-val { font-size: 1.6rem; font-weight: 800; margin-top: .15rem; }
+  .compare-banner .cmp-val.match { color: var(--green); }
+  .compare-banner .cmp-val.diff  { color: var(--red); }
+  .compare-banner .divider { width: 1px; height: 40px; background: var(--border); }
+  .compare-banner .verdict {
+    font-size: .9rem; font-weight: 700; text-align: center;
+    padding: .5rem 1.2rem; border-radius: 8px;
+  }
+  .verdict.ok   { background: rgba(0,230,118,.1); color: var(--green); border: 1px solid rgba(0,230,118,.3); }
+  .verdict.warn { background: rgba(255,107,53,.1); color: var(--accent2); border: 1px solid rgba(255,107,53,.3); }
+  .sync-bar { display: flex; justify-content: center; margin: 1.5rem 0 .5rem; gap: 1rem; }
+  .sync-bar .btn { padding: .5rem 1.8rem; font-size: .9rem; }
+  .sync-bar .btn.play { background: var(--green); border-color: var(--green); color: var(--bg); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Árvore Geradora Mínima</h1>
+    <p>visualização passo a passo · kruskal vs prim</p>
+  </header>
+  <div class="examples-bar" id="examplesBar"></div>
+  <div class="sync-bar">
+    <button class="btn play" onclick="playAll()">▶ Rodar Ambos</button>
+    <button class="btn" onclick="resetAll()">↺ Reiniciar</button>
+  </div>
+  <div class="panels">
+    <div class="card kruskal" id="cardKruskal">
+      <div class="card-header">
+        <span class="algo-badge">KRUSKAL</span>
+        <h2>Ordenação global por peso</h2>
+        <span class="cost-badge" id="costK">custo: —</span>
+      </div>
+      <div class="svg-wrap"><svg class="graph" id="svgK" viewBox="0 0 600 340"></svg></div>
+      <div class="controls">
+        <button class="btn play" id="btnPlayK" onclick="togglePlay('K')">▶ Play</button>
+        <button class="btn" onclick="stepForward('K')">Step →</button>
+        <button class="btn" onclick="resetAlgo('K')">↺</button>
+        <div class="speed-wrap">
+          <label>vel</label>
+          <input type="range" min="1" max="10" value="5" id="speedK" oninput="updateSpeed('K',this.value)"/>
+        </div>
+        <span class="step-info" id="stepInfoK">passo 0 / 0</span>
+      </div>
+      <div class="log-wrap"><div class="log" id="logK"></div></div>
+    </div>
+    <div class="card prim" id="cardPrim">
+      <div class="card-header">
+        <span class="algo-badge">PRIM</span>
+        <h2>Expansão gulosa local</h2>
+        <span class="cost-badge" id="costP">custo: —</span>
+      </div>
+      <div class="svg-wrap"><svg class="graph" id="svgP" viewBox="0 0 600 340"></svg></div>
+      <div class="controls">
+        <button class="btn play" id="btnPlayP" onclick="togglePlay('P')">▶ Play</button>
+        <button class="btn" onclick="stepForward('P')">Step →</button>
+        <button class="btn" onclick="resetAlgo('P')">↺</button>
+        <div class="speed-wrap">
+          <label>vel</label>
+          <input type="range" min="1" max="10" value="5" id="speedP" oninput="updateSpeed('P',this.value)"/>
+        </div>
+        <span class="step-info" id="stepInfoP">passo 0 / 0</span>
+      </div>
+      <div class="log-wrap"><div class="log" id="logP"></div></div>
+    </div>
+  </div>
+  <div class="compare-banner" id="compareBanner" style="display:none"></div>
+</div>
+<script>
+const DATA = [{"name": "Exemplo 1 · 6 vértices", "nodes": [{"id": 0, "x": 300.0, "y": 30.0}, {"id": 1, "x": 421.2, "y": 100.0}, {"id": 2, "x": 421.2, "y": 240.0}, {"id": 3, "x": 300.0, "y": 310.0}, {"id": 4, "x": 178.8, "y": 240.0}, {"id": 5, "x": 178.8, "y": 100.0}], "edges": [[0, 1, 2], [0, 3, 6], [0, 4, 4], [1, 2, 3], [1, 4, 5], [2, 4, 4], [2, 5, 7], [3, 4, 2], [4, 5, 5]], "kruskal": {"custo": 16, "steps": [{"u": 0, "v": 1, "peso": 2, "acao": "add"}, {"u": 3, "v": 4, "peso": 2, "acao": "add"}, {"u": 1, "v": 2, "peso": 3, "acao": "add"}, {"u": 0, "v": 4, "peso": 4, "acao": "add"}, {"u": 2, "v": 4, "peso": 4, "acao": "skip"}, {"u": 1, "v": 4, "peso": 5, "acao": "skip"}, {"u": 4, "v": 5, "peso": 5, "acao": "add"}]}, "prim": {"custo": 16, "steps": [{"u": 0, "v": 1, "peso": 2, "acao": "add"}, {"u": 1, "v": 2, "peso": 3, "acao": "add"}, {"u": 0, "v": 4, "peso": 4, "acao": "add"}, {"u": 4, "v": 3, "peso": 2, "acao": "add"}, {"u": 2, "v": 4, "peso": 4, "acao": "skip"}, {"u": 1, "v": 4, "peso": 5, "acao": "skip"}, {"u": 4, "v": 5, "peso": 5, "acao": "add"}]}}, {"name": "Exemplo 2 · 5 vértices", "nodes": [{"id": 0, "x": 300.0, "y": 30.0}, {"id": 1, "x": 433.1, "y": 126.7}, {"id": 2, "x": 382.3, "y": 283.3}, {"id": 3, "x": 217.7, "y": 283.3}, {"id": 4, "x": 166.9, "y": 126.7}], "edges": [[0, 1, 1], [0, 2, 3], [1, 2, 1], [1, 3, 4], [2, 3, 2], [2, 4, 5], [3, 4, 3]], "kruskal": {"custo": 7, "steps": [{"u": 0, "v": 1, "peso": 1, "acao": "add"}, {"u": 1, "v": 2, "peso": 1, "acao": "add"}, {"u": 2, "v": 3, "peso": 2, "acao": "add"}, {"u": 0, "v": 2, "peso": 3, "acao": "skip"}, {"u": 3, "v": 4, "peso": 3, "acao": "add"}]}, "prim": {"custo": 7, "steps": [{"u": 0, "v": 1, "peso": 1, "acao": "add"}, {"u": 1, "v": 2, "peso": 1, "acao": "add"}, {"u": 2, "v": 3, "peso": 2, "acao": "add"}, {"u": 0, "v": 2, "peso": 3, "acao": "skip"}, {"u": 3, "v": 4, "peso": 3, "acao": "add"}]}}, {"name": "Exemplo 3 · 7 vértices", "nodes": [{"id": 0, "x": 300.0, "y": 30.0}, {"id": 1, "x": 409.5, "y": 82.7}, {"id": 2, "x": 436.5, "y": 201.2}, {"id": 3, "x": 360.7, "y": 296.1}, {"id": 4, "x": 239.3, "y": 296.1}, {"id": 5, "x": 163.5, "y": 201.2}, {"id": 6, "x": 190.5, "y": 82.7}], "edges": [[0, 1, 7], [0, 3, 5], [1, 2, 8], [1, 3, 9], [1, 4, 7], [2, 4, 5], [3, 4, 15], [3, 5, 6], [4, 5, 8], [4, 6, 9], [5, 6, 11]], "kruskal": {"custo": 39, "steps": [{"u": 0, "v": 3, "peso": 5, "acao": "add"}, {"u": 2, "v": 4, "peso": 5, "acao": "add"}, {"u": 3, "v": 5, "peso": 6, "acao": "add"}, {"u": 0, "v": 1, "peso": 7, "acao": "add"}, {"u": 1, "v": 4, "peso": 7, "acao": "add"}, {"u": 1, "v": 2, "peso": 8, "acao": "skip"}, {"u": 4, "v": 5, "peso": 8, "acao": "skip"}, {"u": 1, "v": 3, "peso": 9, "acao": "skip"}, {"u": 4, "v": 6, "peso": 9, "acao": "add"}]}, "prim": {"custo": 39, "steps": [{"u": 0, "v": 3, "peso": 5, "acao": "add"}, {"u": 3, "v": 5, "peso": 6, "acao": "add"}, {"u": 0, "v": 1, "peso": 7, "acao": "add"}, {"u": 1, "v": 4, "peso": 7, "acao": "add"}, {"u": 4, "v": 2, "peso": 5, "acao": "add"}, {"u": 1, "v": 2, "peso": 8, "acao": "skip"}, {"u": 5, "v": 4, "peso": 8, "acao": "skip"}, {"u": 3, "v": 1, "peso": 9, "acao": "skip"}, {"u": 4, "v": 6, "peso": 9, "acao": "add"}]}}];
+
+const state = {
+  K: { cur: 0, timer: null, speed: 5 },
+  P: { cur: 0, timer: null, speed: 5 },
+};
+let curExample = 0;
+
+function init(exIdx) {
+  curExample = exIdx;
+  resetAll();
+  renderExamplesBar();
+  buildSVG('K', DATA[exIdx].nodes, DATA[exIdx].edges);
+  buildSVG('P', DATA[exIdx].nodes, DATA[exIdx].edges);
+  document.getElementById('compareBanner').style.display = 'none';
+}
+
+function renderExamplesBar() {
+  const bar = document.getElementById('examplesBar');
+  bar.innerHTML = DATA.map((d, i) =>
+    `<button onclick="init(${i})" class="${i===curExample?'active':''}">${d.name}</button>`
+  ).join('');
+}
+
+function edgeId(u, v, suffix) {
+  return `edge_${suffix}_${Math.min(u,v)}_${Math.max(u,v)}`;
+}
+function edgeLabelId(u, v, suffix) {
+  return `elabel_${suffix}_${Math.min(u,v)}_${Math.max(u,v)}`;
+}
+
+function buildSVG(algo, nodes, edges) {
+  const svg = document.getElementById('svg'+algo);
+  svg.innerHTML = '';
+  const ns = 'http://www.w3.org/2000/svg';
+
+  edges.forEach(([u, v, w]) => {
+    const nu = nodes[u], nv = nodes[v];
+    const mx = (nu.x + nv.x) / 2, my = (nu.y + nv.y) / 2;
+
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', nu.x); line.setAttribute('y1', nu.y);
+    line.setAttribute('x2', nv.x); line.setAttribute('y2', nv.y);
+    line.setAttribute('class', 'edge');
+    line.setAttribute('id', edgeId(u, v, algo));
+    svg.appendChild(line);
+
+    const rect = document.createElementNS(ns, 'rect');
+    const rw = 20, rh = 16;
+    rect.setAttribute('x', mx - rw/2); rect.setAttribute('y', my - rh/2);
+    rect.setAttribute('width', rw); rect.setAttribute('height', rh);
+    rect.setAttribute('rx', 4);
+    rect.setAttribute('fill', 'var(--bg)');
+    rect.setAttribute('id', edgeLabelId(u,v,algo)+'_bg');
+    svg.appendChild(rect);
+
+    const text = document.createElementNS(ns, 'text');
+    text.setAttribute('x', mx); text.setAttribute('y', my);
+    text.setAttribute('class', 'edge-label');
+    text.setAttribute('id', edgeLabelId(u, v, algo));
+    text.textContent = w;
+    svg.appendChild(text);
+  });
+
+  nodes.forEach(n => {
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('class', 'node');
+    g.setAttribute('id', `node_${algo}_${n.id}`);
+
+    const circle = document.createElementNS(ns, 'circle');
+    circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y);
+    circle.setAttribute('r', 22);
+    g.appendChild(circle);
+
+    const text = document.createElementNS(ns, 'text');
+    text.setAttribute('x', n.x); text.setAttribute('y', n.y);
+    text.textContent = n.id;
+    g.appendChild(text);
+
+    svg.appendChild(g);
+  });
+}
+
+function applyStep(algo, stepIdx) {
+  const ex = DATA[curExample];
+  const steps = algo === 'K' ? ex.kruskal.steps : ex.prim.steps;
+  const suffix = algo;
+
+  ex.edges.forEach(([u,v]) => {
+    const el = document.getElementById(edgeId(u,v,suffix));
+    const lb = document.getElementById(edgeLabelId(u,v,suffix));
+    if (el) { el.className.baseVal = 'edge'; }
+    if (lb) { lb.className.baseVal = 'edge-label'; }
+  });
+  ex.nodes.forEach(n => {
+    const g = document.getElementById(`node_${suffix}_${n.id}`);
+    if (g) g.className.baseVal = 'node';
+  });
+
+  const addedNodes = new Set();
+
+  for (let i = 0; i <= stepIdx && i < steps.length; i++) {
+    const s = steps[i];
+    const eid = edgeId(s.u, s.v, suffix);
+    const lid = edgeLabelId(s.u, s.v, suffix);
+    const el = document.getElementById(eid);
+    const lb = document.getElementById(lid);
+    if (el) el.className.baseVal = 'edge ' + (s.acao === 'add' ? 'added' : 'skipped');
+    if (lb) lb.className.baseVal = 'edge-label ' + (s.acao === 'add' ? 'added' : '');
+    if (s.acao === 'add') { addedNodes.add(s.u); addedNodes.add(s.v); }
+  }
+
+  addedNodes.forEach(id => {
+    const g = document.getElementById(`node_${suffix}_${id}`);
+    if (g) g.className.baseVal = 'node active';
+  });
+
+  const logEl = document.getElementById('log'+algo);
+  logEl.innerHTML = '';
+  for (let i = 0; i <= stepIdx && i < steps.length; i++) {
+    const s = steps[i];
+    const cls = s.acao === 'add' ? 'add' : 'skip';
+    const mark = s.acao === 'add' ? '✓' : '✗';
+    const reason = s.acao === 'add' ? '' : (algo==='K' ? ' ciclo' : ' visitado');
+    logEl.innerHTML += `<div class="log-entry ${cls}">
+      <span class="step-num">#${i+1}</span>
+      <span class="mark">${mark}</span>
+      <span class="edge-str">(${s.u}, ${s.v})</span>
+      <span class="w">w=${s.peso}</span>
+      <span style="color:var(--muted);font-size:.7rem">${reason}</span>
+    </div>`;
+  }
+  logEl.scrollTop = logEl.scrollHeight;
+
+  let runCost = 0;
+  for (let i = 0; i <= stepIdx && i < steps.length; i++) {
+    if (steps[i].acao === 'add') runCost += steps[i].peso;
+  }
+  const totalCost = algo==='K' ? ex.kruskal.custo : ex.prim.custo;
+  const done = stepIdx >= steps.length - 1;
+  const costEl = document.getElementById('cost'+(algo==='K'?'K':'P'));
+  costEl.textContent = done ? `custo: ${totalCost}` : `custo: ${runCost}…`;
+
+  document.getElementById('stepInfo'+algo).textContent =
+    `passo ${Math.min(stepIdx+1, steps.length)} / ${steps.length}`;
+
+  if (done) showCompareBanner();
+}
+
+function showCompareBanner() {
+  const ex = DATA[curExample];
+  const ck = ex.kruskal.custo, cp = ex.prim.custo;
+  const match = ck === cp;
+
+  const norm = arr => arr.filter(s=>s.acao==='add').map(s=>`${Math.min(s.u,s.v)}-${Math.max(s.u,s.v)}-${s.peso}`).sort().join('|');
+  const sameEdges = norm(ex.kruskal.steps) === norm(ex.prim.steps);
+
+  const banner = document.getElementById('compareBanner');
+  banner.style.display = 'flex';
+  banner.innerHTML = `
+    <div class="cmp-item"><div class="cmp-label">Kruskal</div><div class="cmp-val" style="color:var(--accent1)">${ck}</div></div>
+    <div class="divider"></div>
+    <div class="cmp-item"><div class="cmp-label">Prim</div><div class="cmp-val" style="color:var(--accent2)">${cp}</div></div>
+    <div class="divider"></div>
+    <div class="cmp-item"><div class="cmp-label">Diferença</div><div class="cmp-val ${match?'match':'diff'}">${Math.abs(ck-cp)}</div></div>
+    <div class="divider"></div>
+    <div class="cmp-item">
+      <div class="verdict ${match?'ok':'warn'}">${match?'✔ Mesmo custo mínimo':'✗ Custos divergem'}</div>
+      <div class="verdict ${sameEdges?'ok':'warn'}" style="margin-top:.4rem">${sameEdges?'✔ Mesmas arestas':'⚠ AGMs distintas (custo igual)'}</div>
+    </div>`;
+}
+
+function togglePlay(algo) {
+  const s = state[algo];
+  const ex = DATA[curExample];
+  const steps = algo === 'K' ? ex.kruskal.steps : ex.prim.steps;
+  if (s.timer) {
+    clearInterval(s.timer);
+    s.timer = null;
+    document.getElementById('btnPlay'+algo).textContent = '▶ Play';
+  } else {
+    if (s.cur >= steps.length) s.cur = 0;
+    document.getElementById('btnPlay'+algo).textContent = '⏸ Pause';
+    const delay = () => Math.max(100, 1100 - s.speed * 100);
+    s.timer = setInterval(() => {
+      applyStep(algo, s.cur);
+      s.cur++;
+      if (s.cur >= steps.length) {
+        clearInterval(s.timer); s.timer = null;
+        document.getElementById('btnPlay'+algo).textContent = '▶ Play';
+      }
+    }, delay());
+  }
+}
+
+function stepForward(algo) {
+  const s = state[algo];
+  const ex = DATA[curExample];
+  const steps = algo === 'K' ? ex.kruskal.steps : ex.prim.steps;
+  if (s.cur < steps.length) { applyStep(algo, s.cur); s.cur++; }
+}
+
+function resetAlgo(algo) {
+  const s = state[algo];
+  if (s.timer) { clearInterval(s.timer); s.timer = null; }
+  s.cur = 0;
+  const ex = DATA[curExample];
+  buildSVG(algo, ex.nodes, ex.edges);
+  document.getElementById('log'+algo).innerHTML = '';
+  document.getElementById('cost'+(algo==='K'?'K':'P')).textContent = 'custo: —';
+  document.getElementById('stepInfo'+algo).textContent = `passo 0 / ${(algo==='K'?ex.kruskal.steps:ex.prim.steps).length}`;
+  document.getElementById('btnPlay'+algo).textContent = '▶ Play';
+  document.getElementById('compareBanner').style.display = 'none';
+}
+
+function resetAll() { resetAlgo('K'); resetAlgo('P'); }
+
+function playAll() {
+  resetAll();
+  setTimeout(() => togglePlay('K'), 50);
+  setTimeout(() => togglePlay('P'), 50);
+}
+
+function updateSpeed(algo, val) {
+  state[algo].speed = +val;
+  if (state[algo].timer) { togglePlay(algo); togglePlay(algo); }
+}
+
+init(0);
+</script>
+</body>
+</html>
