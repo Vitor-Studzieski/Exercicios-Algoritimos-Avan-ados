@@ -142,3 +142,30 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+
+'''
+# Problema da Mochila 0/1
+
+Este programa resolve o problema da Mochila 0/1.
+
+Dada uma capacidade máxima da mochila e uma lista de itens, cada um com peso e valor, o programa encontra o maior valor possível sem ultrapassar a capacidade da mochila.
+
+Além disso, o programa lista todos os subconjuntos de itens que atingem esse valor máximo.
+
+## Método utilizado
+
+O método utilizado foi busca exaustiva.
+
+O programa testa todos os subconjuntos possíveis de itens usando combinações. Para cada subconjunto, calcula o peso total e o valor total. Caso o peso total seja menor ou igual à capacidade da mochila, o subconjunto é considerado válido.
+
+Se o valor total for maior que o melhor valor encontrado até o momento, ele se torna a nova melhor solução. Caso tenha o mesmo valor máximo, o subconjunto também é armazenado.
+
+## Instruções de execução
+
+1. Salve o código em um arquivo chamado:
+
+```bash
+mochila.py
+'''
